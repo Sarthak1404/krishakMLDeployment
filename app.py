@@ -56,7 +56,7 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         return f"Error in data preprocessing: {e}"
 
     try:
-        # Load Pre-trained Model
+        # Load Pre-Trained Model
         model = load_model("trained_model.keras")
     except FileNotFoundError as e:
         return f"Error: {e}. Please ensure the trained model file exists."
@@ -92,6 +92,11 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         current_precipitation = precipitation
         current_moisture = moisture
         total_predicted_moisture = 0
+        
+        # Ensure API inputs are tuples to avoid unhashable errors (Convert lists to tuples)
+        api_temp = tuple(api_temp)  # Convert to tuple
+        api_humidity = tuple(api_humidity)  # Convert to tuple
+        api_precipitation = tuple(api_precipitation)  # Convert to tuple
         
         # Predict for the next 4 days
         for day in range(4):
