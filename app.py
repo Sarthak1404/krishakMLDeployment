@@ -41,10 +41,11 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         return f"Error in feature engineering: {e}"
 
     try:
+        # Replaced list with a tuple to make it hashable
         features = (
             'Temperature_C', 'Humidity', 'Precipitation_mm', 'MoistureContent_mm_Lag1',
             'MoistureContent_mm_Lag2', 'MoistureContent_mm_RollingMean', 'MoistureContent_mm_RollingStd', 'Temp_Humidity'
-        )
+        )  # Changed from list to tuple
         X = df[features]
         y = df['MoistureContent_mm']
         scaler = StandardScaler()
