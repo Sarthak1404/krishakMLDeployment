@@ -19,12 +19,11 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
     try:
         # Filter crop data
         filtered_df = crop_df[
-            (crop_df["Crop"].str.strip().str.lower() == crop_name.strip().lower()) & 
+            (crop_df["Crop"].str.strip().str.lower() == crop_name.strip().lower()) &
             (crop_df["Growth Phase"].str.strip().str.lower() == growth_phase.strip().lower())
         ]
         if filtered_df.empty:
             return "No matching data found. Please check the crop name and growth phase."
-        
         water_requirement = filtered_df["Water Requirement (mm/day)"].values[0]
     except Exception as e:
         return f"Error processing crop data: {e}"
@@ -43,19 +42,13 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
 
     try:
         features = [
-            'Temperature_C', 'Humidity', 'Precipitation_mm',
-            'MoistureContent_mm_Lag1', 'MoistureContent_mm_Lag2',
-            'MoistureContent_mm_RollingMean', 'MoistureContent_mm_RollingStd',
-            'Temp_Humidity'
+            'Temperature_C', 'Humidity', 'Precipitation_mm', 'MoistureContent_mm_Lag1',
+            'MoistureContent_mm_Lag2', 'MoistureContent_mm_RollingMean', 'MoistureContent_mm_RollingStd', 'Temp_Humidity'
         ]
         X = df[features]
         y = df['MoistureContent_mm']
         scaler = StandardScaler()
-        
-        # Fit the scaler on the feature data
-        scaler.fit(X)
-        
-        # Transform the feature data
+        scaler.fit(X)  # Fit the scaler on the feature data
         X_scaled = scaler.transform(X)
         X_scaled = np.reshape(X_scaled, (X_scaled.shape[0], 1, X_scaled.shape[1]))
     except Exception as e:
@@ -98,7 +91,7 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         current_precipitation = precipitation
         current_moisture = moisture
         total_predicted_moisture = 0
-
+        
         # Predict for the next 4 days
         for day in range(4):
             current_data = pd.DataFrame({
@@ -113,9 +106,7 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
             })
             current_data.fillna(current_moisture, inplace=True)
             predicted_moisture = predict_next_day_moisture(current_data)
-            total_predicted_moisture += predicted_moisture
-
-            # Update for the next day's prediction
+            total_predicted_moisture += predicted_moisture  # Update for the next day's prediction
             current_moisture = predicted_moisture
             if day < len(api_temp):
                 current_temperature = api_temp[day]
