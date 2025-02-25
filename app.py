@@ -19,7 +19,7 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
     try:
         # Filter crop data
         filtered_df = crop_df[
-            (crop_df["Crop"].str.strip().str.lower() == crop_name.strip().lower()) &
+            (crop_df["Crop"].str.strip().str.lower() == crop_name.strip().lower()) & 
             (crop_df["Growth Phase"].str.strip().str.lower() == growth_phase.strip().lower())
         ]
         if filtered_df.empty:
@@ -41,10 +41,10 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         return f"Error in feature engineering: {e}"
 
     try:
-        features = [
+        features = (
             'Temperature_C', 'Humidity', 'Precipitation_mm', 'MoistureContent_mm_Lag1',
             'MoistureContent_mm_Lag2', 'MoistureContent_mm_RollingMean', 'MoistureContent_mm_RollingStd', 'Temp_Humidity'
-        ]
+        )
         X = df[features]
         y = df['MoistureContent_mm']
         scaler = StandardScaler()
@@ -85,7 +85,7 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
             return f"Error generating recommendation: {e}"
 
     try:
-        # Day 0 Inputs
+        # Day 0 Inputs (Using tuples instead of lists for hashable types)
         current_temperature = temp
         current_humidity = humidity
         current_precipitation = precipitation
