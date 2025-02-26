@@ -3,7 +3,6 @@ import numpy as np
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 from flask import Flask, request, jsonify
-import os
 
 app = Flask(__name__)
 
@@ -99,8 +98,14 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         api_humidity = tuple(api_humidity)  # Convert to tuple
         api_precipitation = tuple(api_precipitation)  # Convert to tuple
         
+        # Debugging prints to track the data types
+        print(f"API Temp (tuple): {api_temp}")
+        print(f"API Humidity (tuple): {api_humidity}")
+        print(f"API Precipitation (tuple): {api_precipitation}")
+        
         # Predict for the next 4 days
         for day in range(4):
+            # Ensure current_data has no list-like structures
             current_data = pd.DataFrame({
                 'Temperature_C': [current_temperature],
                 'Humidity': [current_humidity],
@@ -112,6 +117,7 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
                 'Temp_Humidity': [current_temperature * current_humidity]
             })
             current_data.fillna(current_moisture, inplace=True)
+            print(f"Current Data (Day {day}):\n{current_data}")  # Debugging
             predicted_moisture = predict_next_day_moisture(current_data)
             total_predicted_moisture += predicted_moisture  # Update for the next day's prediction
             current_moisture = predicted_moisture
@@ -145,5 +151,4 @@ def predict():
     return jsonify(result)
 
 if __name__ == '__main__':
-    
-    app.run(debug=False, host='0.0.0.0', port=5000)  # Bind to 0.0.0.0 and use the environment's PORT
+    app.run(debug=False)  # Update for production deployment (debug=False)
