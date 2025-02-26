@@ -145,6 +145,6 @@ async def predict(request: PredictionRequest):
     return result
 
 # Run the app using Uvicorn
-if _name_ == "_main_":
+if name == "main":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=10000)
