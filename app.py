@@ -4,7 +4,7 @@ from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 from flask import Flask, request, jsonify
 
-app = Flask(__name__)
+app = Flask(_name_)
 
 def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, moisture, api_temp, api_humidity, api_precipitation):
     try:
@@ -41,15 +41,15 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         return f"Error in feature engineering: {e}"
 
     try:
-        # Replaced list with a tuple to make it hashable
+        # Features as tuple
         features = (
             'Temperature_C', 'Humidity', 'Precipitation_mm', 'MoistureContent_mm_Lag1',
             'MoistureContent_mm_Lag2', 'MoistureContent_mm_RollingMean', 'MoistureContent_mm_RollingStd', 'Temp_Humidity'
-        )  # Changed from list to tuple
-        X = df[features]
+        )
+        X = df[list(features)]
         y = df['MoistureContent_mm']
         scaler = StandardScaler()
-        scaler.fit(X)  # Fit the scaler on the feature data
+        scaler.fit(X)
         X_scaled = scaler.transform(X)
         X_scaled = np.reshape(X_scaled, (X_scaled.shape[0], 1, X_scaled.shape[1]))
     except Exception as e:
@@ -63,7 +63,6 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
     except Exception as e:
         return f"Unexpected error while loading model: {e}"
 
-    # Moisture Prediction Function
     def predict_next_day_moisture(current_data):
         try:
             current_data_scaled = scaler.transform(current_data)
@@ -73,7 +72,6 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         except Exception as e:
             return f"Prediction error: {e}"
 
-    # Irrigation Recommendation Function
     def recommend_irrigation(total_predicted_moisture):
         try:
             if total_predicted_moisture < 1:
@@ -86,40 +84,31 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
             return f"Error generating recommendation: {e}"
 
     try:
-        # Day 0 Inputs (Using tuples instead of lists for hashable types)
+        # Convert all inputs to tuples
+        api_temp = tuple(api_temp)
+        api_humidity = tuple(api_humidity)
+        api_precipitation = tuple(api_precipitation)
+        
         current_temperature = temp
         current_humidity = humidity
         current_precipitation = precipitation
         current_moisture = moisture
         total_predicted_moisture = 0
         
-        # Ensure API inputs are tuples to avoid unhashable errors (Convert lists to tuples)
-        api_temp = tuple(api_temp)  # Convert to tuple
-        api_humidity = tuple(api_humidity)  # Convert to tuple
-        api_precipitation = tuple(api_precipitation)  # Convert to tuple
-        
-        # Debugging prints to track the data types
-        print(f"API Temp (tuple): {api_temp}")
-        print(f"API Humidity (tuple): {api_humidity}")
-        print(f"API Precipitation (tuple): {api_precipitation}")
-        
-        # Predict for the next 4 days
         for day in range(4):
-            # Ensure current_data has no list-like structures
             current_data = pd.DataFrame({
-                'Temperature_C': [current_temperature],
-                'Humidity': [current_humidity],
-                'Precipitation_mm': [current_precipitation],
-                'MoistureContent_mm_Lag1': [current_moisture],
-                'MoistureContent_mm_Lag2': [current_moisture],
-                'MoistureContent_mm_RollingMean': [current_moisture],
-                'MoistureContent_mm_RollingStd': [current_moisture],
-                'Temp_Humidity': [current_temperature * current_humidity]
+                'Temperature_C': (current_temperature,),
+                'Humidity': (current_humidity,),
+                'Precipitation_mm': (current_precipitation,),
+                'MoistureContent_mm_Lag1': (current_moisture,),
+                'MoistureContent_mm_Lag2': (current_moisture,),
+                'MoistureContent_mm_RollingMean': (current_moisture,),
+                'MoistureContent_mm_RollingStd': (current_moisture,),
+                'Temp_Humidity': (current_temperature * current_humidity,)
             })
             current_data.fillna(current_moisture, inplace=True)
-            print(f"Current Data (Day {day}):\n{current_data}")  # Debugging
             predicted_moisture = predict_next_day_moisture(current_data)
-            total_predicted_moisture += predicted_moisture  # Update for the next day's prediction
+            total_predicted_moisture += predicted_moisture
             current_moisture = predicted_moisture
             if day < len(api_temp):
                 current_temperature = api_temp[day]
@@ -144,11 +133,11 @@ def predict():
         data['humidity'],
         data['precipitation'],
         data['moisture'],
-        data['api_temp'],
-        data['api_humidity'],
-        data['api_precipitation']
+        tuple(data['api_temp']),
+        tuple(data['api_humidity']),
+        tuple(data['api_precipitation'])
     )
     return jsonify(result)
 
-if __name__ == '__main__':
-    app.run(debug=False)  # Update for production deployment (debug=False)
+if _name_ == '_main_':
+    app.run(debug=False)
