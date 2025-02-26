@@ -2,9 +2,23 @@ import pandas as pd
 import numpy as np
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List
 
-app = Flask(_name_)
+app = FastAPI()
+
+# Define request body using Pydantic
+class PredictionRequest(BaseModel):
+    crop_name: str
+    growth_phase: str
+    temp: float
+    humidity: float
+    precipitation: float
+    moisture: float
+    api_temp: List[float]
+    api_humidity: List[float]
+    api_precipitation: List[float]
 
 def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, moisture, api_temp, api_humidity, api_precipitation):
     try:
@@ -12,9 +26,9 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         df_concat = pd.read_csv("datasets/deeplearning.csv")
         crop_df = pd.read_csv("datasets/crop_data.csv")
     except FileNotFoundError as e:
-        return f"Error: {e}. Please ensure the dataset files exist."
+        raise HTTPException(status_code=500, detail=f"Dataset files not found: {e}")
     except Exception as e:
-        return f"Unexpected error while loading data: {e}"
+        raise HTTPException(status_code=500, detail=f"Unexpected error loading data: {e}")
 
     try:
         # Filter crop data
@@ -23,10 +37,10 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
             (crop_df["Growth Phase"].str.strip().str.lower() == growth_phase.strip().lower())
         ]
         if filtered_df.empty:
-            return "No matching data found. Please check the crop name and growth phase."
+            raise HTTPException(status_code=400, detail="No matching data found for the given crop and growth phase.")
         water_requirement = filtered_df["Water Requirement (mm/day)"].values[0]
     except Exception as e:
-        return f"Error processing crop data: {e}"
+        raise HTTPException(status_code=500, detail=f"Error processing crop data: {e}")
 
     try:
         # Feature Engineering
@@ -37,31 +51,24 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         df['MoistureContent_mm_RollingStd'] = df['MoistureContent_mm'].rolling(window=3).std()
         df['Temp_Humidity'] = df['Temperature_C'] * df['Humidity']
         df.dropna(inplace=True)
-    except Exception as e:
-        return f"Error in feature engineering: {e}"
 
-    try:
-        # Features as tuple
-        features = (
+        features = [
             'Temperature_C', 'Humidity', 'Precipitation_mm', 'MoistureContent_mm_Lag1',
             'MoistureContent_mm_Lag2', 'MoistureContent_mm_RollingMean', 'MoistureContent_mm_RollingStd', 'Temp_Humidity'
-        )
-        X = df[list(features)]
-        y = df['MoistureContent_mm']
+        ]
+        X = df[features]
         scaler = StandardScaler()
         scaler.fit(X)
-        X_scaled = scaler.transform(X)
-        X_scaled = np.reshape(X_scaled, (X_scaled.shape[0], 1, X_scaled.shape[1]))
     except Exception as e:
-        return f"Error in data preprocessing: {e}"
+        raise HTTPException(status_code=500, detail=f"Error in data preprocessing: {e}")
 
     try:
         # Load Pre-Trained Model
         model = load_model("trained_model.keras")
     except FileNotFoundError as e:
-        return f"Error: {e}. Please ensure the trained model file exists."
+        raise HTTPException(status_code=500, detail=f"Model file not found: {e}")
     except Exception as e:
-        return f"Unexpected error while loading model: {e}"
+        raise HTTPException(status_code=500, detail=f"Unexpected error loading model: {e}")
 
     def predict_next_day_moisture(current_data):
         try:
@@ -70,7 +77,7 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
             predicted_moisture = model.predict(current_data_scaled)
             return predicted_moisture[0][0]
         except Exception as e:
-            return f"Prediction error: {e}"
+            raise HTTPException(status_code=500, detail=f"Prediction error: {e}")
 
     def recommend_irrigation(total_predicted_moisture):
         try:
@@ -81,63 +88,63 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
             else:
                 return "Monitor moisture levels"
         except Exception as e:
-            return f"Error generating recommendation: {e}"
+            raise HTTPException(status_code=500, detail=f"Error generating recommendation: {e}")
 
     try:
-        # Convert all inputs to tuples
-        api_temp = tuple(api_temp)
-        api_humidity = tuple(api_humidity)
-        api_precipitation = tuple(api_precipitation)
-        
         current_temperature = temp
         current_humidity = humidity
         current_precipitation = precipitation
         current_moisture = moisture
         total_predicted_moisture = 0
-        
+
         for day in range(4):
             current_data = pd.DataFrame({
-                'Temperature_C': (current_temperature,),
-                'Humidity': (current_humidity,),
-                'Precipitation_mm': (current_precipitation,),
-                'MoistureContent_mm_Lag1': (current_moisture,),
-                'MoistureContent_mm_Lag2': (current_moisture,),
-                'MoistureContent_mm_RollingMean': (current_moisture,),
-                'MoistureContent_mm_RollingStd': (current_moisture,),
-                'Temp_Humidity': (current_temperature * current_humidity,)
+                'Temperature_C': [current_temperature],
+                'Humidity': [current_humidity],
+                'Precipitation_mm': [current_precipitation],
+                'MoistureContent_mm_Lag1': [current_moisture],
+                'MoistureContent_mm_Lag2': [current_moisture],
+                'MoistureContent_mm_RollingMean': [current_moisture],
+                'MoistureContent_mm_RollingStd': [current_moisture],
+                'Temp_Humidity': [current_temperature * current_humidity]
             })
             current_data.fillna(current_moisture, inplace=True)
             predicted_moisture = predict_next_day_moisture(current_data)
             total_predicted_moisture += predicted_moisture
             current_moisture = predicted_moisture
+
             if day < len(api_temp):
                 current_temperature = api_temp[day]
                 current_humidity = api_humidity[day]
                 current_precipitation = api_precipitation[day]
     except Exception as e:
-        return f"Error during prediction loop: {e}"
+        raise HTTPException(status_code=500, detail=f"Error during prediction loop: {e}")
 
     try:
         recommendation = recommend_irrigation(total_predicted_moisture)
-        return f"Total Predicted Moisture over 4 days: {total_predicted_moisture:.2f}, Recommendation: {recommendation}"
+        return {
+            "total_predicted_moisture": round(total_predicted_moisture, 2),
+            "recommendation": recommendation
+        }
     except Exception as e:
-        return f"Error in final result processing: {e}"
+        raise HTTPException(status_code=500, detail=f"Error in final result processing: {e}")
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.json
+@app.post("/predict")
+async def predict(request: PredictionRequest):
     result = prediction_call(
-        data['crop_name'],
-        data['growth_phase'],
-        data['temp'],
-        data['humidity'],
-        data['precipitation'],
-        data['moisture'],
-        tuple(data['api_temp']),
-        tuple(data['api_humidity']),
-        tuple(data['api_precipitation'])
+        request.crop_name,
+        request.growth_phase,
+        request.temp,
+        request.humidity,
+        request.precipitation,
+        request.moisture,
+        request.api_temp,
+        request.api_humidity,
+        request.api_precipitation
     )
-    return jsonify(result)
+    return result
 
-if _name_ == '_main_':
-    app.run(debug=False)
+# Run the app using Uvicorn
+if _name_ == "_main_":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
