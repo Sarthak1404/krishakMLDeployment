@@ -3,6 +3,7 @@ import numpy as np
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 from flask import Flask, request, jsonify
+import os
 
 app = Flask(__name__)
 
@@ -144,4 +145,5 @@ def predict():
     return jsonify(result)
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)  # Update for production deployment (debug=False)
+    
+    app.run(debug=False, host='0.0.0.0', port=5000)  # Bind to 0.0.0.0 and use the environment's PORT
