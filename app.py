@@ -144,4 +144,4 @@ def predict():
     return jsonify(result)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False, host='0.0.0.0', port=5000)  # Update for production deployment (debug=False)
