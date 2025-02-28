@@ -97,7 +97,7 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         current_moisture = moisture
         total_predicted_moisture = 0
 
-        for day in range(4):
+        for day in range(3):
             current_data = pd.DataFrame({
                 'Temperature_C': [current_temperature],
                 'Humidity': [current_humidity],
