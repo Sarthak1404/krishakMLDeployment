@@ -47,8 +47,8 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
         df = df_concat.copy()
         df['MoistureContent_mm_Lag1'] = df['MoistureContent_mm'].shift(1)
         df['MoistureContent_mm_Lag2'] = df['MoistureContent_mm'].shift(2)
-        df['MoistureContent_mm_RollingMean'] = df['MoistureContent_mm'].rolling(window=3).mean()
-        df['MoistureContent_mm_RollingStd'] = df['MoistureContent_mm'].rolling(window=3).std()
+        df['MoistureContent_mm_RollingMean'] = df['MoistureContent_mm'].rolling(window=2).mean()
+        df['MoistureContent_mm_RollingStd'] = df['MoistureContent_mm'].rolling(window=2).std()
         df['Temp_Humidity'] = df['Temperature_C'] * df['Humidity']
         df.dropna(inplace=True)
 
