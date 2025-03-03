@@ -81,7 +81,7 @@ def prediction_call(crop_name, growth_phase, temp, humidity, precipitation, mois
 
     def recommend_irrigation(total_predicted_moisture):
         try:
-            if (total_predicted_moisture//3) < 1:
+            if (total_predicted_moisture//3) < 4:
                 return "Irrigate"
             elif (total_predicted_moisture//3) > 7:
                 return "Do not irrigate, soil moisture sufficient"
